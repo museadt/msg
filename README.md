@@ -42,75 +42,10 @@ simple_test.py，是个测试脚本，我自己用的，换一下IP地址，端�
 如果发图的话，其实也挺快的，毕竟也就是个游戏截图，但是如果有必要，就开个线程，单独发，不要影响到游戏脚本。
 
 
-#### 一个调用例子，从一个模块导入这段函数，在模块里把函数的IP填写为服务端的IP和商口，我偿试在调用处直接传参，但是失败了，所以只能在模块里填写，暂时我也不想知道为什么了，有空再研究，
-#### 调用个截图函数，然后把这个图发出去，填上标题，内容，什么的，刚有试图片不在，会报错，所以尽量保证，这些参数调用的东西都存在，短期内我不一定有精力修复这些。。。
-###  因为我这是真实的例子复制过来的，while套for，所以有一堆的状态变量，看的有些乱，各位自行测试的时候，可以仅保留发送的一套逻辑就行了。。。。
-
-```
- dr.skip_war_other(dm)           #按ESC和跳过各种
-            #向检测角色是否死亡的函数传递的状态变量
-            #如果变量写在这里，那么每次for都会检查一下，也就是说如果角色再次死亡，那么会再次打印死亡信息！
-            die_msg_printed = False
-            die_true_msg_printed = False
-            death_notification_sent = False    # 添加死亡通知发送状态变量
-
-            dm.MoveTo(gc_x2, gc_y2)
-            dm.Delay(3500)
-    
-            dm.KeyPress(118)        #F7 随便按2次
-            dm.Delay(50)
-            dm.KeyPress(118)
-            dm.Delay(3310)
-            
-            dm.RightClick()         #随便按2次右键
-            dm.Delay(50)
-            dm.RightClick()
-            dm.Delay(300)
-            
-            for i in range(130):        #攻击130次后，上面的代码使用一次F7魔法。
-                if not stop_event.is_set() and win32gui.IsWindow(hwnd):
-
-                    if not tip_printed:
-                        print("法师攻击线程正在运行中...")
-                        tip_printed = True
-
-                    # 缩进太多次，注意这里起的缩进，只有在not字符正下方，能会在检查停止信号范围内！
+2025.8.18
+优化一下客户端代码量，修正保存图片的路径，应为客户端的路径内。而不是在外面
 
 
-                    die_msg_printed = dr.character_die(dm,stop_event,ocr_name,die_msg_printed)    # 调用dragonraja模块的character_die函数，检查角色是否处在战斗状态
-                    die_true_msg_printed = dr.cha_true_die(dm,hwnd,ocr_name,die_true_msg_printed)    # 调用dragonraja模块的cha_true_die函数，检查角色是否真正死亡
-
-
-                    if die_true_msg_printed and not death_notification_sent:
-                        from utils.windows_setup import send_mixed_message
-
-                        cha_die_cap_ret = dm.Capture(0,0,1366,768,"screen.bmp")
-                        dm.Delay(200)
-
-
-                        your_title = "角色真正死亡"    # 填写消息标题（可选，默认为"图文消息"）
-                        your_text_content = "游戏角色已经飘了，查看详情里的图片，可以看到是不是被人攻击的，如果是被人物攻击的，那么截图里通常会保留被人攻击的人物的名字。"    # 填写你要发送的文字内容
-
-
-                        your_image_path = r"D:\python_Scripts_32\jiayuan_guaji_pj_724_rebuild\screen.bmp"    # 填写你要发送的图片路径
-
-
-
-                        # 调用函数发送消息
-                        success = send_mixed_message(
-                            image_path=your_image_path,
-                            text_content=your_text_content,
-                            title=your_title                          
-
-                        )
-
-                                                
-                        if success:
-                            print("✅ 消息发送成功！")
-                            death_notification_sent = True    # 标记通知已发送
-
-
-```
 
 
 

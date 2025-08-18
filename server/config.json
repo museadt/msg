@@ -1,0 +1,15 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5001
+  },
+  "client": {
+    "server_host": "localhost",
+    "server_port": 5001,
+    "reconnect_interval": 5
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "app.log"
+  }
+}

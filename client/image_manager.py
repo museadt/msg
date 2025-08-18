@@ -11,8 +11,13 @@ from PySide2.QtCore import Qt, QSize, QPoint
 class ImageManager:
     """图片管理器 - 负责图片的保存、加载和显示"""
     
-    def __init__(self, save_directory: str = "saved_images"):
-        self.save_directory = save_directory
+    def __init__(self, save_directory: str = None):
+        if save_directory is None:
+            # 默认保存到client目录下的saved_images文件夹
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            self.save_directory = os.path.join(current_dir, "saved_images")
+        else:
+            self.save_directory = save_directory
         self.ensure_save_directory()
     
     def ensure_save_directory(self):
@@ -444,18 +449,22 @@ def create_image_viewer(image_data, parent=None, image_path: str = None) -> Imag
     else:
         return None
 
-def get_saved_image_path(message_id: int, image_data: str, save_directory: str = "saved_images") -> Optional[str]:
+def get_saved_image_path(message_id: int, image_data: str, save_directory: str = None) -> Optional[str]:
     """获取已保存图片的路径
     
     Args:
         message_id: 消息ID
         image_data: base64编码的图片数据
-        save_directory: 保存目录
+        save_directory: 保存目录，默认为None时使用client目录下的saved_images
         
     Returns:
         已保存的文件路径，如果不存在则返回None
     """
     try:
+        if save_directory is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            save_directory = os.path.join(current_dir, "saved_images")
+            
         if not os.path.exists(save_directory):
             return None
             
@@ -474,13 +483,13 @@ def get_saved_image_path(message_id: int, image_data: str, save_directory: str =
         print(f"获取保存图片路径失败: {e}")
         return None
 
-def save_image_automatically(message_id: int, image_data: str, save_directory: str = "saved_images") -> Optional[str]:
+def save_image_automatically(message_id: int, image_data: str, save_directory: str = None) -> Optional[str]:
     """自动保存图片
     
     Args:
         message_id: 消息ID
         image_data: base64编码的图片数据
-        save_directory: 保存目录
+        save_directory: 保存目录，默认为None时使用client目录下的saved_images
         
     Returns:
         保存的文件路径，失败返回None
@@ -488,17 +497,21 @@ def save_image_automatically(message_id: int, image_data: str, save_directory: s
     image_manager = ImageManager(save_directory)
     return image_manager.save_image_from_base64(message_id, image_data)
 
-def delete_saved_image(message_id: int, save_directory: str = "saved_images") -> bool:
+def delete_saved_image(message_id: int, save_directory: str = None) -> bool:
     """删除指定消息ID的所有保存图片
     
     Args:
         message_id: 消息ID
-        save_directory: 保存目录
+        save_directory: 保存目录，默认为None时使用client目录下的saved_images
         
     Returns:
         删除是否成功
     """
     try:
+        if save_directory is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            save_directory = os.path.join(current_dir, "saved_images")
+            
         if not os.path.exists(save_directory):
             return True  # 目录不存在，视为删除成功
             

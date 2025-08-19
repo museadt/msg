@@ -156,6 +156,8 @@ except Exception as e:
     print(f"❌ 消息发送失败，错误信息: {e}")
     # 跳过错误，继续执行程序
 ```
+
 <3>图解说明
+
 ![函数说明](readm_pic_1.png)
 

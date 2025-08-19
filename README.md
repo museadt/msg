@@ -69,7 +69,8 @@ import base64      # 用于图片的base64编码
 ### 把这个函数，放到自己项目里的某个模块中，然后在需要运行的脚本里from...import就能用了。
 #### 或者把这个函数，整个复制到你脚本的代码里，然后直接调用。
 <1>把函数弄过来
-```def send_mixed_message(image_path, text_content, title="图文消息", server_url="http://127.0.0.1:5001"):
+```
+    def send_mixed_message(image_path, text_content, title="图文消息", server_url="http://127.0.0.1:5001"):
     """
     发送图文混合消息到服务器
     

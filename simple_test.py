@@ -11,7 +11,7 @@ import base64      # 用于图片的base64编码
 import os          # 用于文件路径操作
 
 
-def send_mixed_message(image_path, text_content, title="图文消息", server_url="http://127.0.0.1:5001"):
+def send_mixed_message(image_path, text_content, title="图文消息", server_url="http://192.168.41.1:5001"):
     """
     发送图文混合消息到服务器
     
@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     your_title = "消息通知2"    # 填写消息标题（可选，默认为"图文消息"）
     your_text_content = "游戏角色死亡先是花，然后是卡，最后审核。我现在到审核其实也不难，兰州拉面老板们以前就是手搓这个出名，应该还需要一当你女朋友拿出这个四联 你应该就觉得事情不简单了到两人。不确定后面还有没有[捂脸]。"    # 填写你要发送的文字内容
-    your_image_path = "d:\\python_Scripts_32\\my_msg\\server\\-2025-08-06-14_04_43.png"    # 填写你要发送的图片路径
+    your_image_path = "d:\\python_Scripts_32\\my_msg\\999.png"    # 填写你要发送的图片路径
     
 
 

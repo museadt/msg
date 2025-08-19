@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>799</width>
-    <height>590</height>
+    <width>808</width>
+    <height>581</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,34 +64,19 @@ QPushButton:hover {
     color: black; /* 高对比度文字颜色 */
 }
 
-/* 新增特定按钮样式 - init_browser_pushButton */
-#init_browser_pushButton {
-    background-color: #bd93f9; /* 初始状态背景色设定为主题紫色 */
-    border: 2px solid #bd93f9;       /* 边框颜色与背景同步，强化视觉统一 */
-    color: black;                   /* 深色文字与亮色背景形成对比 */
-    /* 继承通用按钮的内边距和圆角样式，保持交互控件视觉一致性 */
+/* 自定义最大化和最小化按钮 */
+QPushButton#mini_pushButton, QPushButton#close_pushButton {
+    background: transparent; /* 设置透明背景 */
+    border: 2; /* 设置无边框 */
+    color: white; /* 设置文字颜色，可以根据需要修改 */
 }
 
-/* 停止类按钮共享样式 */
-#stop_fs_attack_pushButton,
-#stop_js_recover_pushButton,
-#stop_zs_attack_pushButton,
-#stop_dz_attack_pushButton,
-#stop_gj_attack_pushButton
- {
-    background-color: #808080; /* 正常状态：淡灰色 */
-    border: 2px solid #333;    /* 边框颜色 */
-    color: black;              /* 文字颜色 */
+QPushButton#mini_pushButton:hover, QPushButton#close_pushButton:hover {
+    background: rgba(255, 255, 255, 0.3); /* 鼠标悬停时的背景颜色，透明度可以根据需要调整 */
 }
 
-#stop_fs_attack_pushButton:hover,
-#stop_js_recover_pushButton:hover,
-#stop_zs_attack_pushButton:hover,
-#stop_dz_attack_pushButton:hover,
-#stop_gj_attack_pushButton:hover {
-    background-color: #1e90ff; /* 悬停时改为蓝色 */
-    border-color: #1e90ff;
-    color: black;
+QPushButton#mini_pushButton:pressed, QPushButton#close_pushButton:pressed {
+    background: rgba(255, 255, 255, 0.2); /* 按下时的背景颜色，透明度可以根据需要调整 */
 }
 
 /* 文本输入类控件 - 深灰背景区分容器 */
@@ -203,48 +188,6 @@ QPushButton:disabled {
     color: #666;                   /* 文字颜色：中灰，体现不可交互性 */
 }
 
-/* 显式声明特定按钮的禁用状态，强制使用与通用按钮完全一致的颜色 */
-#init_browser_pushButton:disabled {
-    background-color: #444;        /* 与通用按钮禁用背景色一致 */
-    border-color: #444;            /* 与通用按钮禁用边框色一致 */
-    color: #666;                   /* 与通用按钮禁用文字色一致 */
-}
-
-#stop_fs_attack_pushButton:disabled,
-#stop_js_recover_pushButton:disabled {
-    background-color: #444;        /* 与通用按钮禁用背景色一致 */
-    border-color: #444;            /* 与通用按钮禁用边框色一致 */
-    color: #666;                   /* 与通用按钮禁用文字色一致 */
-}
-
-/* QTabWidget样式 */
-QTabWidget::pane {
-    border: 1px solid #444; /* 标签页内容区域边框 */
-    background-color: black; /* 标签页内容区域背景色 */
-    margin-top: -1px; /* 避免顶部边框重叠 */
-    border-radius: 5px;
-}
-
-QTabWidget::tab-bar {
-    alignment: left; /* 标签栏对齐方式 */
-}
-
-QTabBar::tab {
-    min-width: 60px;
-    min-height: 18px;
-    margin: 0 3px;
-    padding: 1px;
-}
-
-QScrollBar:vertical {
-    width: 8px;
-}
-
-/* 为info_label添加深灰色背景 */
-#info_label {
-    background-color: #1a1a1a; /* 深灰色背景，与其他输入控件保持一致 */
-    color: #00ff00; /* 文字显示为亮绿色 */
-}
 
 /* 悬停提示 */
 QToolTip {
@@ -252,7 +195,11 @@ QToolTip {
     color: #f8f8f2; /* 亮灰白文字 */
     border: 1px solid #444; /* 边框颜色 */
     padding: 2px; /* 内边距 */
-}</string>
+}
+
+
+/* =====================消息列表和消息详情的lable=================================*/
+</string>
   </property>
   <widget class="QListWidget" name="message_list">
    <property name="geometry">
@@ -280,9 +227,9 @@ QToolTip {
   <widget class="QLabel" name="message_detail_label">
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>5</y>
-     <width>48</width>
+     <x>285</x>
+     <y>10</y>
+     <width>61</width>
      <height>16</height>
     </rect>
    </property>
@@ -293,23 +240,26 @@ QToolTip {
   <widget class="QLabel" name="info_label">
    <property name="geometry">
     <rect>
-     <x>5</x>
+     <x>10</x>
      <y>546</y>
-     <width>785</width>
-     <height>30</height>
+     <width>261</width>
+     <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>未连接</string>
+    <string>状态栏</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
    </property>
   </widget>
   <widget class="QTextEdit" name="message_display">
    <property name="geometry">
     <rect>
      <x>285</x>
-     <y>25</y>
+     <y>30</y>
      <width>506</width>
-     <height>141</height>
+     <height>136</height>
     </rect>
    </property>
    <property name="readOnly">
@@ -325,16 +275,11 @@ QToolTip {
      <x>285</x>
      <y>170</y>
      <width>506</width>
-     <height>371</height>
+     <height>370</height>
     </rect>
    </property>
    <property name="styleSheet">
-    <string notr="true">QTextBrowser {
-    background-color: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 3px;
-    padding: 5px;
-}</string>
+    <string notr="true"/>
    </property>
    <property name="verticalScrollBarPolicy">
     <enum>Qt::ScrollBarAsNeeded</enum>
@@ -367,6 +312,42 @@ QToolTip {
    </property>
    <property name="text">
     <string>全部已读</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="mini_pushButton">
+   <property name="geometry">
+    <rect>
+     <x>720</x>
+     <y>3</y>
+     <width>30</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>-</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="close_pushButton">
+   <property name="geometry">
+    <rect>
+     <x>755</x>
+     <y>3</y>
+     <width>30</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>X</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineEdit">
+   <property name="geometry">
+    <rect>
+     <x>2</x>
+     <y>30</y>
+     <width>281</width>
+     <height>1</height>
+    </rect>
    </property>
   </widget>
  </widget>

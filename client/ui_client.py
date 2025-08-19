@@ -73,6 +73,10 @@ class MessageUI(QWidget):
         self.load_read_status()  # 加载已读状态
         self.load_window_position()  # 加载窗口位置
         
+        # 拖曳相关变量
+        self.drag_position = None
+        self.is_dragging = False
+        
         # 初始化图片管理器
         self.image_manager = ImageManager()
         
@@ -104,7 +108,10 @@ class MessageUI(QWidget):
         
         if not self.ui:
             raise RuntimeError(f"无法加载UI文件: {loader.errorString()}")
-        
+
+        # 隐藏标题栏
+        self.setWindowFlags(Qt.FramelessWindowHint)
+
         # 获取UI中的控件
         self.message_list = self.ui.findChild(QListWidget, "message_list")
         self.message_display = self.ui.findChild(QTextEdit, "message_display")
@@ -135,45 +142,43 @@ class MessageUI(QWidget):
             print(f"警告: 未找到image_display控件")
         
         # 从UI文件中获取按钮
-        self.refresh_button = self.ui.findChild(QPushButton, "refresh_button")
-        self.clear_button = self.ui.findChild(QPushButton, "clear_button")
         self.del_list_pushButton = self.ui.findChild(QPushButton, "del_list_pushButton")
         self.all_read_pushButton = self.ui.findChild(QPushButton, "all_read_pushButton")
         
-        # 如果UI文件中没有按钮，则手动创建
-        if not self.refresh_button:
-            self.refresh_button = QPushButton("刷新")
-        if not self.clear_button:
-            self.clear_button = QPushButton("清空")
+        # 获取最小化和关闭按钮
+        self.mini_pushButton = self.ui.findChild(QPushButton, "mini_pushButton")
+        self.close_pushButton = self.ui.findChild(QPushButton, "close_pushButton")
         
-        # 设置按钮样式
-        button_style = """
-            QPushButton {
-                background-color: #9898ee;
-                color: black;
-                border: 2px solid #333;
-                border-radius: 5px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1e90ff;
-                border-color: #1e90ff;
-            }
-        """
-        self.refresh_button.setStyleSheet(button_style)
-        self.clear_button.setStyleSheet(button_style)
+        # 设置最小化和关闭按钮的字体和文本
+        from PySide2.QtGui import QFont
         
-        # 如果按钮是手动创建的，则添加到UI中
-        if not self.ui.findChild(QPushButton, "refresh_button"):
-            button_layout = QHBoxLayout()
-            button_layout.addWidget(self.refresh_button)
-            button_layout.addWidget(self.clear_button)
-            
-            # 找到主布局并添加按钮布局
-            main_layout = self.ui.layout()
-            if main_layout:
-                main_layout.addLayout(button_layout)
+        # 从本地字体文件加载Segoe MDL2 Assets字体
+        from PySide2.QtGui import QFontDatabase
+        font_id = QFontDatabase.addApplicationFont("fonts/segmdl2.ttf")
+        if font_id < 0:
+            print("调试: 无法加载本地字体文件，将使用系统字体")
+            mdl2_font = QFont("Segoe MDL2 Assets")
+        else:
+            font_families = QFontDatabase.applicationFontFamilies(font_id)
+            if font_families:
+                mdl2_font = QFont(font_families[0])
+                print("调试: 成功加载本地字体文件")
+            else:
+                print("调试: 无法从字体文件获取字体族，将使用系统字体")
+                mdl2_font = QFont("Segoe MDL2 Assets")
+        mdl2_font.setPointSize(8)  # 设置字体大小为8
+        
+        # 设置最小化按钮
+        if self.mini_pushButton:
+            self.mini_pushButton.setFont(mdl2_font)
+            self.mini_pushButton.setText("\uE949")  # 最小化符号
+            print("调试: mini_pushButton 字体和文本已设置")
+        
+        # 设置关闭按钮
+        if self.close_pushButton:
+            self.close_pushButton.setFont(mdl2_font)
+            self.close_pushButton.setText("\uE106")  # 关闭符号
+            print("调试: close_pushButton 字体和文本已设置")
         
         # 验证所有控件都已找到
         if not all([self.message_list, self.message_display, self.info_label]):
@@ -222,19 +227,6 @@ class MessageUI(QWidget):
         self.message_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.message_list.customContextMenuRequested.connect(self.show_context_menu)
         
-        # 连接刷新和清空按钮
-        if self.refresh_button:
-            self.refresh_button.clicked.connect(self.refresh_messages)
-            print("调试: refresh_button 已连接")
-        else:
-            print("调试: 未找到 refresh_button")
-            
-        if self.clear_button:
-            self.clear_button.clicked.connect(self.clear_display)
-            print("调试: clear_button 已连接")
-        else:
-            print("调试: 未找到 clear_button")
-        
         # 连接清空列表按钮
         if self.del_list_pushButton:
             self.del_list_pushButton.clicked.connect(self.clear_all_messages)
@@ -248,6 +240,20 @@ class MessageUI(QWidget):
             print("调试: all_read_pushButton 已连接到 mark_all_as_read_improved 方法")
         else:
             print("调试: 未找到 all_read_pushButton 按钮")
+        
+        # 连接最小化按钮
+        if self.mini_pushButton:
+            self.mini_pushButton.clicked.connect(self.hide)
+            print("调试: mini_pushButton 已连接")
+        else:
+            print("调试: 未找到 mini_pushButton 按钮")
+        
+        # 连接关闭按钮
+        if self.close_pushButton:
+            self.close_pushButton.clicked.connect(self.hide)
+            print("调试: close_pushButton 已连接到 hide 方法")
+        else:
+            print("调试: 未找到 close_pushButton 按钮")
         
         # 连接应用程序焦点变化信号
         QApplication.instance().focusChanged.connect(self.on_focus_changed)
@@ -364,7 +370,7 @@ class MessageUI(QWidget):
     def update_connection_status(self, is_connected: bool, status_msg: str):
         """更新连接状态"""
         # 构建更丰富的状态信息
-        if is_connected and hasattr(self, 'current_messages'):
+        if is_connected and hasattr(self, 'current_messages') and self.current_messages:      # 确保有消息列表
             total_messages = len(self.current_messages)
             unread_count = sum(1 for msg in self.current_messages if msg.get('id') and not self.read_status.get(msg.get('id'), False))
             read_count = total_messages - unread_count
@@ -372,7 +378,7 @@ class MessageUI(QWidget):
             text_count = total_messages - image_count
             
             # 构建详细的状态信息
-            status_info = f"{status_msg} | 总计: {total_messages} | 未读: {unread_count} | 已读: {read_count} | 图片: {image_count} | 文字: {text_count}"
+            status_info = f"{status_msg} | 总计: {total_messages} | 未读: {unread_count} | 已读: {read_count}"
             self.info_label.setText(status_info)
         else:
             self.info_label.setText(status_msg)
@@ -1076,3 +1082,59 @@ class MessageUI(QWidget):
                 print("消息处理线程已停止")
         except Exception as e:
             print(f"停止消息处理线程时发生错误: {e}")
+    
+    def mousePressEvent(self, event):
+        """鼠标按下事件处理"""
+        if event.button() == Qt.LeftButton:
+            # 检查是否点击在空白区域（没有控件的地方）
+            clicked_widget = self.childAt(event.pos())
+            
+            # 更准确的空白区域检测：检查点击的控件是否是主要的UI控件
+            main_ui_widgets = [self.message_list, self.message_display, self.info_label, 
+                            self.del_list_pushButton, self.all_read_pushButton]
+            
+            # 如果点击的是主窗口本身或者是非主要控件区域，则允许拖曳
+            if clicked_widget is None or clicked_widget == self or clicked_widget not in main_ui_widgets:
+                # 进一步检查：如果点击的是某个控件的子控件，且该子控件不是可交互的，也允许拖曳
+                allow_drag = True
+                if clicked_widget and clicked_widget != self:
+                    # 检查是否是主要控件的子控件
+                    for widget in main_ui_widgets:
+                        if widget and widget.isAncestorOf(clicked_widget):
+                            # 如果是主要控件的子控件，检查是否是可交互的控件类型
+                            if isinstance(clicked_widget, (QPushButton, QListWidget, QTextEdit, QTextBrowser, QLabel)):
+                                allow_drag = False
+                                break
+                
+                if allow_drag:
+                    # 开始拖曳
+                    self.is_dragging = True
+                    self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                    event.accept()
+                    return
+        # 如果不是拖曳情况，调用父类方法
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """鼠标移动事件处理"""
+        if self.is_dragging and event.buttons() == Qt.LeftButton:
+            # 移动窗口
+            new_position = event.globalPos() - self.drag_position
+            self.move(new_position)
+            event.accept()
+            return
+        # 如果不是拖曳情况，调用父类方法
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """鼠标释放事件处理"""
+        if event.button() == Qt.LeftButton and self.is_dragging:
+            # 结束拖曳
+            self.is_dragging = False
+            self.drag_position = None
+            # 保存新的窗口位置
+            self.save_window_position()
+            event.accept()
+            return
+        # 如果不是拖曳情况，调用父类方法
+        super().mouseReleaseEvent(event)

@@ -336,6 +336,19 @@ def main():
     # 设置应用程序样式
     app.setStyle('Fusion')
     
+    # 设置应用程序窗口图标
+    icons_dir = os.path.join(os.path.dirname(__file__), 'icons')
+    normal_icon_path = os.path.join(icons_dir, 'normal.bmp')
+    if os.path.exists(normal_icon_path):
+        try:
+            app_icon = QIcon(normal_icon_path)
+            app.setWindowIcon(app_icon)
+            print("应用程序图标设置成功")
+        except Exception as e:
+            print(f"设置应用程序图标失败: {e}")
+    else:
+        print("提示: 未找到normal.bmp图标文件，跳过设置应用程序图标")
+    
     # 加载配置
     config = load_config()
     print(f"配置加载成功: {config}")

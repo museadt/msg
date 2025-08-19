@@ -1,10 +1,10 @@
 {
   "server": {
-    "host": "0.0.0.0",
+    "host": "192.168.41.1",
     "port": 5001
   },
   "client": {
-    "server_host": "localhost",
+    "server_host": "192.168.41.1",
     "server_port": 5001,
     "reconnect_interval": 5
   },

@@ -134,7 +134,7 @@ dm.Capture(0,0,1366,768,"screen.bmp")
 dm.Delay(200)
 
 your_title = "角色真正死亡"    # 填写消息标题（可选，默认为"图文消息"）
-your_text_content = "游戏角色已经飘了，查看详情里的图片，可以看到是不是被人攻击的，如果是被人物攻击的，那么截图里通常会保留被人攻击的人物的名字。"    # 填写你要发送的文字内容
+your_text_content = "游戏角色已经飘了。"    # 填写你要发送的文字内容
 your_image_path = r"D:\python_Scripts_32\jiayuan_guaji_pj_724_rebuild\screen.bmp"    # 填写你要发送的图片路径
 your_server_url = "http://192.168.41.1:5001"    # 填写您的URL
 

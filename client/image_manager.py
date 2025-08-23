@@ -107,6 +107,11 @@ class ImageViewerDialog(QDialog):
         self.image_path = image_path
         self.parent_window = parent  # 保存父窗口引用
         self.current_scale = 1.0  # 当前缩放比例
+        
+        # 拖拽相关变量
+        self.drag_position = None
+        self.is_dragging = False
+        
         self.setup_ui()
         self.setup_window()
         
@@ -135,6 +140,11 @@ class ImageViewerDialog(QDialog):
         self.graphics_view.setDragMode(QGraphicsView.ScrollHandDrag)
         self.graphics_view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.graphics_view.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        
+        # 为图形视图设置鼠标事件处理，支持窗口拖拽
+        self.graphics_view.mousePressEvent = self.graphics_view_mousePressEvent
+        self.graphics_view.mouseMoveEvent = self.graphics_view_mouseMoveEvent
+        self.graphics_view.mouseReleaseEvent = self.graphics_view_mouseReleaseEvent
         
         # 创建场景
         self.scene = QGraphicsScene()
@@ -169,36 +179,7 @@ class ImageViewerDialog(QDialog):
             "}"
         )
         
-        # 图片路径显示标签
-        self.path_label = QLabel()
-        if self.image_path:
-            # 显示文件名而不是完整路径，节省空间
-            filename = os.path.basename(self.image_path)
-            self.path_label.setText(f"文件: {filename}")
-            self.path_label.setStyleSheet(
-                "QLabel {"
-                "    background-color: #1e1e1e;"
-                "    color: #f8f8f2;"
-                "    padding: 5px 10px;"
-                "    border: 1px solid #444;"
-                "    border-radius: 3px;"
-                "    font-size: 12px;"
-                "}"
-            )
-            self.path_label.setToolTip(f"完整路径: {self.image_path}")
-        else:
-            self.path_label.setText("文件: 未保存")
-            self.path_label.setStyleSheet(
-                "QLabel {"
-                "    background-color: #1e1e1e;"
-                "    color: #888888;"
-                "    padding: 5px 10px;"
-                "    border: 1px solid #444;"
-                "    border-radius: 3px;"
-                "    font-size: 12px;"
-                "}"
-            )
-        
+
         # 打开目录按钮
         self.open_folder_button = QPushButton("打开位置")
         self.open_folder_button.clicked.connect(self.open_image_folder)
@@ -245,15 +226,20 @@ class ImageViewerDialog(QDialog):
         
         # 添加按钮到布局
         button_layout.addWidget(self.actual_size_button)
-        button_layout.addWidget(self.path_label)
         button_layout.addStretch()
         button_layout.addWidget(self.open_folder_button)
         button_layout.addWidget(close_button)
         button_layout.setContentsMargins(10, 10, 10, 10)
+        # 设置按钮布局的对齐方式
+        button_layout.setAlignment(Qt.AlignLeft)
         
         # 添加到主布局
-        layout.addWidget(self.graphics_view)
-        layout.addLayout(button_layout)
+        layout.addWidget(self.graphics_view)  # 第一行：图片
+        layout.addLayout(button_layout)  # 第二行：按钮
+        
+        # 设置主布局的内容边距，增加可拖拽区域
+        layout.setContentsMargins(25, 25, 25, 25)
+        
         self.setLayout(layout)
         
         # 启用滚轮事件
@@ -280,6 +266,15 @@ class ImageViewerDialog(QDialog):
         # 更新场景大小
         self.scene.setSceneRect(self.pixmap_item.boundingRect())
         
+        # 如果是1:1显示，确保禁用滚动条
+        if self.current_scale == 1.0:
+            self.graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        else:
+            # 缩放时启用滚动条，允许用户查看完整图片
+            self.graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self.graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
         # 更新窗口标题
         self.show_image_info()
     
@@ -290,6 +285,10 @@ class ImageViewerDialog(QDialog):
         
         # 调整窗口大小以适应1:1图片
         self.adjust_window_to_image()
+        
+        # 禁用滚动条，确保1:1显示时不会出现滚动条
+        self.graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     
     def adjust_window_to_image(self):
         """调整窗口大小以适应图片"""
@@ -308,8 +307,12 @@ class ImageViewerDialog(QDialog):
         image_display_width = int(self.image.width() * self.current_scale)
         image_display_height = int(self.image.height() * self.current_scale)
         
-        window_width = min(image_display_width + 50, available_width)
-        window_height = min(image_display_height + 150, available_height)  # 增加按钮空间
+        # 精确计算需要的空间，确保不出现滚动条
+        layout_margin = 50  # 布局边距（左右各25，上下各25）
+        button_height = 80  # 按钮区域高度
+        
+        window_width = min(image_display_width + layout_margin, available_width)
+        window_height = min(image_display_height + layout_margin + button_height, available_height)
         
         # 设置窗口大小
         self.resize(window_width, window_height)
@@ -320,6 +323,102 @@ class ImageViewerDialog(QDialog):
         x = screen_center_x - self.width() // 2
         y = screen_center_y - self.height() // 2
         self.move(x, y)
+    
+    def mousePressEvent(self, event):
+        """鼠标按下事件 - 开始拖拽窗口"""
+        if event.button() == Qt.LeftButton:
+            # 检查是否点击在空白区域（非按钮区域）
+            if not self.is_widget_at_position(event.pos()):
+                self.is_dragging = True
+                self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                event.accept()
+                return
+        
+        # 调用父类方法处理其他情况
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """鼠标移动事件 - 拖拽窗口"""
+        if self.is_dragging and event.buttons() == Qt.LeftButton and self.drag_position:
+            # 移动窗口
+            new_position = event.globalPos() - self.drag_position
+            self.move(new_position)
+            event.accept()
+            return
+        
+        # 调用父类方法处理其他情况
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """鼠标释放事件 - 结束拖拽"""
+        if event.button() == Qt.LeftButton:
+            self.is_dragging = False
+            self.drag_position = None
+            event.accept()
+            return
+        
+        # 调用父类方法处理其他情况
+        super().mouseReleaseEvent(event)
+    
+    def is_widget_at_position(self, pos):
+        """检查指定位置是否有控件（按钮等）"""
+        # 获取窗口内的所有子控件
+        for child in self.findChildren(QPushButton):
+            if child.geometry().contains(pos):
+                return True
+        
+        # 检查路径标签区域
+        if hasattr(self, 'path_label') and self.path_label.geometry().contains(pos):
+            return True
+            
+        return False
+    
+    def graphics_view_mousePressEvent(self, event):
+        """图形视图鼠标按下事件 - 支持窗口拖拽和图片拖拽"""
+        if event.button() == Qt.LeftButton:
+            # 如果按住Alt键，则进行窗口拖拽
+            if event.modifiers() & Qt.AltModifier:
+                self.is_dragging = True
+                self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                event.accept()
+                return
+            else:
+                # 否则进行图片拖拽（原始功能）
+                # 调用原始的鼠标按下事件处理
+                QGraphicsView.mousePressEvent(self.graphics_view, event)
+                return
+        
+        # 调用父类方法处理其他情况
+        QGraphicsView.mousePressEvent(self.graphics_view, event)
+    
+    def graphics_view_mouseMoveEvent(self, event):
+        """图形视图鼠标移动事件 - 支持窗口拖拽和图片拖拽"""
+        if self.is_dragging and event.buttons() == Qt.LeftButton and self.drag_position:
+            # 移动窗口
+            new_position = event.globalPos() - self.drag_position
+            self.move(new_position)
+            event.accept()
+            return
+        else:
+            # 否则进行图片拖拽（原始功能）
+            QGraphicsView.mouseMoveEvent(self.graphics_view, event)
+            return
+    
+    def graphics_view_mouseReleaseEvent(self, event):
+        """图形视图鼠标释放事件 - 结束拖拽"""
+        if event.button() == Qt.LeftButton:
+            if self.is_dragging:
+                self.is_dragging = False
+                self.drag_position = None
+                event.accept()
+                return
+            else:
+                # 调用原始的鼠标释放事件处理
+                QGraphicsView.mouseReleaseEvent(self.graphics_view, event)
+                return
+        
+        # 调用父类方法处理其他情况
+        QGraphicsView.mouseReleaseEvent(self.graphics_view, event)
     
     def wheelEvent(self, event):
         """处理滚轮事件 - 缩放图片"""
@@ -356,6 +455,9 @@ class ImageViewerDialog(QDialog):
     
     def setup_window(self):
         """设置窗口属性"""
+        # 移除标题栏
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        
         # 获取屏幕尺寸
         desktop = QDesktopWidget()
         screen_geometry = desktop.screenGeometry()
@@ -367,19 +469,24 @@ class ImageViewerDialog(QDialog):
         available_width = screen_width - margin
         available_height = screen_height - margin
         
-        # 计算窗口大小（图片尺寸 + 边框和按钮空间）
-        window_width = min(self.image.width() + 50, available_width)
-        window_height = min(self.image.height() + 150, available_height)  # 增加按钮空间
+        # 计算窗口大小（图片尺寸 + 边框和按钮空间），增加足够边距确保不出现滚动条
+        layout_margin = 50  # 布局边距
+        button_height = 80  # 按钮区域高度
+        path_height = 40   # 路径区域高度
+        
+        window_width = min(self.image.width() + layout_margin * 2, available_width)
+        window_height = min(self.image.height() + layout_margin * 2 + button_height + path_height, available_height)
         
         # 设置窗口大小
         self.resize(window_width, window_height)
         self.setMinimumSize(400, 300)
         
-        # 设置深色主题
+        # 设置深色主题，无边框
         self.setStyleSheet(
             "QDialog {"
             "    background-color: #2b2b2b;"
             "    color: #f8f8f2;"
+            "    border: 0px solid #555555;"
             "}"
             "QScrollArea {"
             "    background-color: #1e1e1e;"
@@ -402,7 +509,8 @@ class ImageViewerDialog(QDialog):
         """显示图片信息"""
         scale_percent = int(self.current_scale * 100)
         info = f"图片尺寸: {self.image.width()} x {self.image.height()} 像素 - 缩放: {scale_percent}%"
-        self.setWindowTitle(f"图片查看器 - {info}")
+        # 标题栏已移除，不再设置窗口标题
+        # self.setWindowTitle(f"图片查看器 - {info}")
     
     def open_image_folder(self):
         """打开图片所在文件夹"""

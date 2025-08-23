@@ -2,15 +2,253 @@ import sys
 import os
 from PySide2.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                QHBoxLayout, QListWidget, QListWidgetItem, QTextEdit, QLabel, 
-                               QPushButton, QMessageBox, QFileDialog, QTextBrowser, QMenu)
+                               QPushButton, QMessageBox, QFileDialog, QTextBrowser, QMenu, QDialog, 
+                               QDialogButtonBox, QSpacerItem, QSizePolicy)
 from PySide2.QtCore import Qt, QTimer, QThread, Signal, QFile, QByteArray, QBuffer, QUrl
-from PySide2.QtGui import QIcon, QFont, QPixmap, QImage, QPainter, QColor, QDesktopServices
+from PySide2.QtGui import QIcon, QFont, QPixmap, QImage, QPainter, QColor, QDesktopServices, QPen
 from PySide2.QtUiTools import QUiLoader
 import json
 import base64
 import threading
 from datetime import datetime
 from typing import List, Dict
+
+class CustomMessageBox(QDialog):
+    """自定义无边框消息框"""
+    
+    def __init__(self, parent=None, title="", text="", icon_type=QMessageBox.Information):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setModal(True)
+        self.setMinimumWidth(300)
+        
+        # 主布局
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 15, 20, 15)
+        layout.setSpacing(10)
+        
+
+        
+        # 消息文本
+        self.text_label = QLabel(text)
+        self.text_label.setStyleSheet("font-size: 12px; color: #f8f8f2;")
+        self.text_label.setWordWrap(True)
+        self.text_label.setTextFormat(Qt.PlainText)
+        layout.addWidget(self.text_label)
+        
+        # 按钮布局
+        self.button_box = QDialogButtonBox()
+        self.button_box.setOrientation(Qt.Horizontal)
+        self.button_box.setStyleSheet("""
+            QDialogButtonBox {
+                background-color: transparent;
+            }
+            QDialogButtonBox QPushButton {
+                background-color: #9898ee;
+                color: black;
+                border: 2px solid #333;
+                border-radius: 5px;
+                padding: 5px 15px;
+                font-size: 12px;
+                min-width: 80px;
+                margin: 0 5px;
+            }
+            QDialogButtonBox QPushButton:hover {
+                background-color: #1e90ff;
+                border-color: #1e90ff;
+                color: black;
+            }
+        """)
+        
+        # 创建按钮布局容器以确保对齐
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.button_box)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setAlignment(Qt.AlignCenter)
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+        
+        # 设置背景样式
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #000000;
+                border: 2px solid #444;
+                border-radius: 8px;
+            }
+        """)
+        
+        # 使窗口可拖动
+        self.drag_position = None
+        self.is_dragging = False
+    
+    
+    def set_standard_buttons(self, buttons):
+        """设置标准按钮"""
+        # 将QMessageBox按钮枚举转换为QDialogButtonBox按钮枚举
+        dialog_buttons = QDialogButtonBox.StandardButtons()
+        
+        if buttons & QMessageBox.Yes:
+            dialog_buttons |= QDialogButtonBox.Yes
+        if buttons & QMessageBox.No:
+            dialog_buttons |= QDialogButtonBox.No
+        if buttons & QMessageBox.Ok:
+            dialog_buttons |= QDialogButtonBox.Ok
+        if buttons & QMessageBox.Cancel:
+            dialog_buttons |= QDialogButtonBox.Cancel
+        if buttons & QMessageBox.Abort:
+            dialog_buttons |= QDialogButtonBox.Abort
+        if buttons & QMessageBox.Retry:
+            dialog_buttons |= QDialogButtonBox.Retry
+        if buttons & QMessageBox.Ignore:
+            dialog_buttons |= QDialogButtonBox.Ignore
+        if buttons & QMessageBox.Open:
+            dialog_buttons |= QDialogButtonBox.Open
+        if buttons & QMessageBox.Save:
+            dialog_buttons |= QDialogButtonBox.Save
+        if buttons & QMessageBox.SaveAll:
+            dialog_buttons |= QDialogButtonBox.SaveAll
+        if buttons & QMessageBox.Discard:
+            dialog_buttons |= QDialogButtonBox.Discard
+        if buttons & QMessageBox.Help:
+            dialog_buttons |= QDialogButtonBox.Help
+        if buttons & QMessageBox.Apply:
+            dialog_buttons |= QDialogButtonBox.Apply
+        if buttons & QMessageBox.Reset:
+            dialog_buttons |= QDialogButtonBox.Reset
+            
+        self.button_box.setStandardButtons(dialog_buttons)
+        
+        # 设置按钮文本为中文
+        if buttons & QMessageBox.Yes:
+            yes_button = self.button_box.button(QDialogButtonBox.Yes)
+            if yes_button:
+                yes_button.setText("是的")
+        if buttons & QMessageBox.No:
+            no_button = self.button_box.button(QDialogButtonBox.No)
+            if no_button:
+                no_button.setText("否")
+        if buttons & QMessageBox.Ok:
+            ok_button = self.button_box.button(QDialogButtonBox.Ok)
+            if ok_button:
+                ok_button.setText("确定")
+        if buttons & QMessageBox.Cancel:
+            cancel_button = self.button_box.button(QDialogButtonBox.Cancel)
+            if cancel_button:
+                cancel_button.setText("取消")
+    
+    def set_default_button(self, button):
+        """设置默认按钮"""
+        # 将QMessageBox按钮枚举转换为QDialogButtonBox按钮枚举
+        if button == QMessageBox.Yes:
+            dialog_button = QDialogButtonBox.Yes
+        elif button == QMessageBox.No:
+            dialog_button = QDialogButtonBox.No
+        elif button == QMessageBox.Ok:
+            dialog_button = QDialogButtonBox.Ok
+        elif button == QMessageBox.Cancel:
+            dialog_button = QDialogButtonBox.Cancel
+        elif button == QMessageBox.Abort:
+            dialog_button = QDialogButtonBox.Abort
+        elif button == QMessageBox.Retry:
+            dialog_button = QDialogButtonBox.Retry
+        elif button == QMessageBox.Ignore:
+            dialog_button = QDialogButtonBox.Ignore
+        elif button == QMessageBox.Open:
+            dialog_button = QDialogButtonBox.Open
+        elif button == QMessageBox.Save:
+            dialog_button = QDialogButtonBox.Save
+        elif button == QMessageBox.SaveAll:
+            dialog_button = QDialogButtonBox.SaveAll
+        elif button == QMessageBox.Discard:
+            dialog_button = QDialogButtonBox.Discard
+        elif button == QMessageBox.Help:
+            dialog_button = QDialogButtonBox.Help
+        elif button == QMessageBox.Apply:
+            dialog_button = QDialogButtonBox.Apply
+        elif button == QMessageBox.Reset:
+            dialog_button = QDialogButtonBox.Reset
+        else:
+            dialog_button = None
+            
+        if dialog_button is not None:
+            self.button_box.button(dialog_button).setDefault(True)
+    
+    def exec_(self):
+        """执行对话框"""
+        # 居中显示
+        if self.parent():
+            parent_rect = self.parent().geometry()
+            self.move(
+                parent_rect.x() + (parent_rect.width() - self.width()) // 2,
+                parent_rect.y() + (parent_rect.height() - self.height()) // 2
+            )
+        return super().exec_()
+    
+    def mousePressEvent(self, event):
+        """鼠标按下事件，用于拖动窗口"""
+        if event.button() == Qt.LeftButton:
+            self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+            self.is_dragging = True
+            event.accept()
+    
+    def mouseMoveEvent(self, event):
+        """鼠标移动事件，用于拖动窗口"""
+        if self.is_dragging and event.buttons() == Qt.LeftButton:
+            if self.drag_position is not None:
+                self.move(event.globalPos() - self.drag_position)
+                event.accept()
+    
+    def mouseReleaseEvent(self, event):
+        """鼠标释放事件"""
+        self.is_dragging = False
+        self.drag_position = None
+        event.accept()
+
+    @staticmethod
+    def custom_question(parent, title, text, buttons=QMessageBox.Yes | QMessageBox.No, default_button=QMessageBox.No):
+        """自定义问题对话框"""
+        dialog = CustomMessageBox(parent, title, text, QMessageBox.Question)
+        dialog.set_standard_buttons(buttons)
+        dialog.set_default_button(default_button)
+        
+        # 使用变量来存储用户的选择
+        dialog.result = default_button
+        
+        # 连接按钮点击信号
+        yes_button = dialog.button_box.button(QDialogButtonBox.Yes)
+        no_button = dialog.button_box.button(QDialogButtonBox.No)
+        
+        if yes_button:
+            yes_button.clicked.connect(lambda: dialog.done(QMessageBox.Yes))
+        if no_button:
+            no_button.clicked.connect(lambda: dialog.done(QMessageBox.No))
+        
+        # 执行对话框并返回结果
+        result = dialog.exec_()
+        return result if result != QDialog.Rejected else default_button
+
+    @staticmethod
+    def custom_warning(parent, title, text):
+        """自定义警告对话框"""
+        dialog = CustomMessageBox(parent, title, text, QMessageBox.Warning)
+        dialog.set_standard_buttons(QMessageBox.Ok)
+        dialog.exec_()
+
+    @staticmethod
+    def custom_critical(parent, title, text):
+        """自定义错误对话框"""
+        dialog = CustomMessageBox(parent, title, text, QMessageBox.Critical)
+        dialog.set_standard_buttons(QMessageBox.Ok)
+        dialog.exec_()
+
+    @staticmethod
+    def custom_information(parent, title, text):
+        """自定义信息对话框"""
+        dialog = CustomMessageBox(parent, title, text, QMessageBox.Information)
+        dialog.set_standard_buttons(QMessageBox.Ok)
+        dialog.exec_()
 
 # 导入网络客户端
 from network_client import MessageClient
@@ -35,7 +273,7 @@ class MessageThread(QThread):
             try:
                 # 检查连接状态
                 is_connected = self.client.check_connection()
-                status_msg = "已连接" if is_connected else "未连接"
+                status_msg = "服务器已连接" if is_connected else "服务器未连接"
                 self.connection_status.emit(is_connected, status_msg)
                 
                 # 获取消息列表
@@ -122,11 +360,13 @@ class MessageUI(QWidget):
             # 获取原有QTextEdit的属性
             geometry = self.message_display.geometry()
             size_policy = self.message_display.sizePolicy()
+            original_html = self.message_display.toHtml()  # 获取原有HTML内容
             
             # 创建新的QTextBrowser用于显示文字内容
             self.message_display = QTextBrowser(self.ui)
             self.message_display.setGeometry(geometry)
             self.message_display.setSizePolicy(size_policy)
+            self.message_display.setHtml(original_html)  # 保留原有HTML内容
             self.message_display.setOpenLinks(False)  # 禁用自动打开链接
             self.message_display.anchorClicked.connect(self.on_anchor_clicked)  # 处理链接点击
         
@@ -288,7 +528,7 @@ class MessageUI(QWidget):
             # 更新状态栏显示消息统计信息
             if hasattr(self, 'message_thread') and self.message_thread:
                 is_connected = self.client.check_connection()
-                status_msg = "已连接" if is_connected else "未连接"
+                status_msg = "服务器已连接" if is_connected else "服务器未连接"
                 self.update_connection_status(is_connected, status_msg)
             return
         
@@ -364,7 +604,7 @@ class MessageUI(QWidget):
         if hasattr(self, 'message_thread') and self.message_thread:
             # 模拟连接状态更新来触发统计信息显示
             is_connected = self.client.check_connection()
-            status_msg = "已连接" if is_connected else "未连接"
+            status_msg = "服务器已连接" if is_connected else "服务器未连接"
             self.update_connection_status(is_connected, status_msg)
     
     def update_connection_status(self, is_connected: bool, status_msg: str):
@@ -561,9 +801,9 @@ class MessageUI(QWidget):
                             viewer.destroyed.connect(lambda: self.remove_image_viewer(viewer))
                             viewer.show()
                     else:
-                        QMessageBox.warning(self, "错误", "图片数据无效或格式不支持")
+                        custom_warning(self, "错误", "图片数据无效或格式不支持")
                 except Exception as e:
-                    QMessageBox.warning(self, "错误", f"图片处理失败: {str(e)}")
+                    custom_warning(self, "错误", f"图片处理失败: {str(e)}")
         else:
             # 处理其他链接
             QDesktopServices.openUrl(url)
@@ -571,7 +811,6 @@ class MessageUI(QWidget):
     def clear_display(self):
         """清空显示"""
         self.message_display.clear()
-        self.message_display.setPlaceholderText("请从左侧选择消息查看详情...")
         # 清空图片显示区域
         if hasattr(self, 'image_display'):
             self.image_display.clear()
@@ -584,15 +823,38 @@ class MessageUI(QWidget):
     def clear_all_messages(self):
         """清空所有消息列表"""
         # 确认对话框
-        reply = QMessageBox.question(
+        reply = CustomMessageBox.custom_question(
             self, 
             "确认清空", 
-            "确定要清空所有消息吗？\n\n此操作将：\n1. 清空本地消息列表\n2. 删除所有本地保存的图片文件\n3. 清空已读状态\n4. 删除服务端所有消息数据\n\n警告：此操作不可恢复！\n\n点击'刷新'按钮可重新加载消息。",
+            "确定要清空所有消息吗？\n\n此操作将：\n1. 清空本地消息列表\n2. 删除所有本地保存的图片文件\n3. 清空已读状态\n4. 删除服务端所有消息数据\n\n警告：此操作不可恢复！\n",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
         
         if reply == QMessageBox.Yes:
+            # 先尝试删除服务端所有消息
+            server_deleted = False
+            try:
+                server_deleted = self.client.delete_all_messages()
+                if not server_deleted:
+                    # 服务端删除失败，显示错误提示并返回
+                    custom_warning(
+                        self, 
+                        "清空失败", 
+                        "无法从服务端删除消息，请检查网络连接。\n\n本地数据保持不变。"
+                    )
+                    return
+            except Exception as e:
+                # 删除过程中出现错误，显示错误提示并返回
+                custom_critical(
+                    self, 
+                    "清空错误", 
+                    f"清空消息时发生错误：\n{str(e)}\n\n本地数据保持不变。"
+                )
+                print(f"清空消息时发生错误: {e}")
+                return
+            
+            # 只有服务端删除成功后，才继续删除本地数据
             # 删除所有本地保存的图片文件
             deleted_images_count = 0
             try:
@@ -605,13 +867,6 @@ class MessageUI(QWidget):
                             deleted_images_count += 1
             except Exception as e:
                 print(f"删除本地图片文件时发生错误: {e}")
-            
-            # 删除服务端所有消息
-            server_deleted = False
-            try:
-                server_deleted = self.client.delete_all_messages()
-            except Exception as e:
-                print(f"删除服务端消息时发生错误: {e}")
             
             # 清空消息列表
             self.message_list.clear()
@@ -626,10 +881,7 @@ class MessageUI(QWidget):
             # 不设置清空标志，允许消息线程自动重新加载消息
             # self.messages_cleared = True
             # 显示成功消息
-            if server_deleted:
-                success_text = f"消息列表已完全清空，已删除 {deleted_images_count} 个本地图片文件和服务端所有数据"
-            else:
-                success_text = f"消息列表已清空，已删除 {deleted_images_count} 个本地图片文件，但服务端删除失败"
+            success_text = f"消息列表已完全清空，已删除 {deleted_images_count} 个本地图片文件和服务端所有数据"
             self.info_label.setText(success_text)
             
             # 清空后立即刷新消息列表，重新从服务器获取消息
@@ -736,6 +988,35 @@ class MessageUI(QWidget):
             if message_id:
                 # 创建右键菜单
                 menu = QMenu(self)
+                # 设置菜单样式
+                menu.setStyleSheet("""
+                    QMenu {
+                        background-color: #1a1a1a;
+                        border: 1px solid #444;
+                        border-radius: 2px;
+                        padding: 1px;
+                        /* 确保所有角都有圆角 */
+                        alternate-background-color: transparent;
+                    }
+                    QMenu::item {
+                        background-color: transparent;
+                        color: #f8f8f2;
+                        border: none;
+                        border-radius: 2px;
+                        padding: 6px 30px;
+                        margin: 0px;
+                    }
+                    QMenu::item:selected {
+                        background-color: #07c160;
+                        color: white;
+                        border: none;
+                    }
+                    QMenu::item:hover {
+                        background-color: #333333;
+                        color: #ffffff;
+                        border: 2px;
+                    }
+                """)
                 
                 # 添加删除动作
                 delete_action = menu.addAction("删除消息")
@@ -752,9 +1033,9 @@ class MessageUI(QWidget):
         index = self.message_list.row(item)
         
         # 确认对话框
-        reply = QMessageBox.question(
+        reply = CustomMessageBox.custom_question(
             self, 
-            "确认删除", 
+            "单条消息----确认删除", 
             f"确定要删除这条消息吗？\n\n此操作将同时删除本地记录和服务端数据库中的数据。",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
@@ -808,7 +1089,7 @@ class MessageUI(QWidget):
                     
                 else:
                     # 服务端删除失败
-                    QMessageBox.warning(
+                    CustomMessageBox.custom_warning(
                         self, 
                         "删除失败", 
                         f"无法从服务端删除消息 {message_id}，请检查网络连接。"
@@ -816,7 +1097,7 @@ class MessageUI(QWidget):
                     
             except Exception as e:
                 # 删除过程中出现错误
-                QMessageBox.critical(
+                CustomMessageBox.custom_critical(
                     self, 
                     "删除错误", 
                     f"删除消息时发生错误：\n{str(e)}"
@@ -827,13 +1108,13 @@ class MessageUI(QWidget):
         """通过消息ID和索引删除消息（避免直接传递item对象）"""
         # 首先检查索引是否有效
         if index < 0 or index >= self.message_list.count():
-            QMessageBox.warning(self, "删除错误", "消息索引无效，可能已被删除。")
+            CustomMessageBox.custom_warning(self, "删除错误", "消息索引无效，可能已被删除。")
             return
         
         # 通过索引获取item对象
         item = self.message_list.item(index)
         if not item:
-            QMessageBox.warning(self, "删除错误", "消息项不存在，可能已被删除。")
+            CustomMessageBox.custom_warning(self, "删除错误", "消息项不存在，可能已被删除。")
             return
         
         # 调用原来的delete_message方法

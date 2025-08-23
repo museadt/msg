@@ -3,7 +3,7 @@ import os
 import json
 import threading
 import time
-from PySide2.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon, QMenu
+from PySide2.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon, QMenu, QWidget
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import QIcon
 
@@ -157,6 +157,39 @@ def create_tray_icon(main_window):
     
     # 创建托盘菜单
     tray_menu = QMenu()
+    
+    # 设置托盘菜单样式 - 黑色背景
+    tray_menu.setStyleSheet("""
+        QMenu {
+            background-color: #000000;
+            border: 1px solid #444;
+            border-radius: 3px;
+            padding: 2px;
+        }
+        QMenu::item {
+            background-color: transparent;
+            color: #ffffff;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            padding: 5px 25px 5px 20px;
+            margin: 1px;
+        }
+        QMenu::item:selected {
+            background-color: #07c160;
+            color: white;
+            border: 1px solid #07c160;
+        }
+        QMenu::item:hover {
+            background-color: #333333;
+            color: #ffffff;
+            border: 1px solid #555555;
+        }
+        QMenu::separator {
+            height: 1px;
+            background-color: #444;
+            margin: 2px 4px;
+        }
+    """)
     
     # 显示/隐藏主窗口动作
     show_action = tray_menu.addAction("显示主窗口")
@@ -326,7 +359,12 @@ def main():
     if instance_lock is None:
         # 创建QApplication实例用于显示弹窗
         app = QApplication(sys.argv)
-        QMessageBox.information(None, "提示", "程序已在运行，请不要重复启动！")
+        # 创建临时父窗口用于显示无边框弹窗
+        temp_widget = QWidget()
+        temp_widget.setWindowFlags(Qt.FramelessWindowHint)
+        temp_widget.hide()
+        from ui_client import custommessagebox
+        custommessagebox.custom_information(temp_widget, "提示", "程序已在运行，请不要重复启动！")
         print("已有实例正在运行，显示提示后退出")
         sys.exit(0)
     
@@ -363,7 +401,12 @@ def main():
         print("连接监控已启动")
         
     except Exception as e:
-        QMessageBox.critical(None, "错误", f"创建网络客户端失败: {str(e)}")
+        # 创建临时父窗口用于显示无边框弹窗
+        temp_widget = QWidget()
+        temp_widget.setWindowFlags(Qt.FramelessWindowHint)
+        temp_widget.hide()
+        from ui_client import custommessagebox
+        custommessagebox.custom_critical(temp_widget, "错误", f"创建网络客户端失败: {str(e)}")
         # 清理互斥体
         cleanup_instance_lock(instance_lock)
         sys.exit(1)
@@ -375,7 +418,12 @@ def main():
         print("主窗口创建成功")
         
     except Exception as e:
-        QMessageBox.critical(None, "错误", f"创建主窗口失败: {str(e)}")
+        # 创建临时父窗口用于显示无边框弹窗
+        temp_widget = QWidget()
+        temp_widget.setWindowFlags(Qt.FramelessWindowHint)
+        temp_widget.hide()
+        from ui_client import custom_critical
+        custom_critical(temp_widget, "错误", f"创建主窗口失败: {str(e)}")
         # 清理互斥体
         cleanup_instance_lock(instance_lock)
         sys.exit(1)
